@@ -31,7 +31,7 @@ knitr::opts_chunk$set(warning= FALSE) # will NOT include warning messages in the
 # knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE) #keeps code wrapped in the output
 
 # if you haven't installed these packages run the following line (first delete the # sign):
-#install.packages(c("tidyverse", "janitor", "kableExtra", "cowplot", "skimr", "measurements"))
+install.packages(c("tidyverse", "janitor", "kableExtra", "cowplot", "skimr", "measurements"))
 
 library(tidyverse) #data wrangling & cleaning incl. ggplot
 library(janitor) # more data cleaning functions
@@ -66,6 +66,8 @@ __Review data structure & clean column names__
 # review variables and class types
 str(data)
 
+# View(data)
+
 # use the janitor package to clean up column names- lowercase, no spaces
 data <- janitor::clean_names(data)
 
@@ -73,7 +75,7 @@ data <- janitor::clean_names(data)
   # How many unqiue coral reefs are included in this dataset?
 length(unique(data$reef_name)) #612
   # What are the different substrate codes?
-unique(data$substrate_code)
+unique(data$substrate_code) # metadata file tells us what the codes mean
 
 
 # Use the kableExtra package to view a pretty table for a subset of the data:
@@ -89,7 +91,7 @@ data[1:10,] %>%
 ```{r skimr, results='hide'}
 
 # And we can use the skimr package to review the dataset
-skimr::skim(data)
+skimr::skim(data) # include the package so people know where the function is coming from
 
 ```
 
@@ -112,26 +114,26 @@ data[1:20,] %>% distinct(reef_id, date, substrate_code)
 
 # use filter to pick specific rows (or types of rows) you want to keep
 data[1:20, ] %>% 
-  select(reef_id, date, substrate_code, total) %>%
-  filter(substrate_code == "HC")
+  select(reef_id, date, substrate_code, total, segment_code) %>% # select on columns, filter on rows
+  filter(substrate_code == "HC") # HC = hard coral
 
 # use mutate to create a new column - via calucation
 data[1:20, ] %>% 
-  select(reef_id, date, substrate_code, total) %>%
+  select(reef_id, date, substrate_code, total, segment_code) %>%
   filter(substrate_code == "HC") %>%
   mutate(sum_points = sum(total))
 
 # use mutate to create a new column - via adding information
 data[1:20, ] %>% 
-  select(reef_id, date, substrate_code, total) %>%
+  select(reef_id, date, substrate_code, total, segment_code) %>%
   filter(substrate_code == "HC") %>%
   mutate(sum_points = sum(total),
          data_source = "Reef Check")
 
 # use arrange to change the order of how variables appear in the column
 data[1:20, ] %>% 
-  select(reef_id, date, substrate_code, total) %>%
-  arrange(substrate_code)
+  select(reef_id, date, substrate_code, total, segment_code) %>%
+  arrange(substrate_code, total) # alphabetical b/c they're character vectors, then orders the total within that
 ```
 
 *****
@@ -161,9 +163,12 @@ data_by_survey <- data %>%
   group_by(reef_id, date, depth, substrate_code) %>%
   filter(substrate_code == "HC") %>%
   mutate(coral_pts = sum(total),
-         poss_pts = length(segment_code) * 40,
-         perc_survey = (coral_pts/poss_pts)*100) %>%
-  ungroup()
+         poss_pts = length(segment_code) * 40, # might need to do something like this for BRC!
+         perc_survey = (coral_pts/poss_pts)*100) %>% # this too
+  ungroup() # DO THIS ON ALL GROUP_BY THINGS --  this is case you want to anything else with the data frame! You don't want R to group by the previous variables all the time
+
+# View(data_by_survey)
+# also go back and check calculations
 
 # new_df <- previous_df (this creates a new df based on what we do below, if you don't want to create a new df then you don't do the <- assignment)
   # pick grouping variables 
@@ -182,12 +187,12 @@ Previously, we saw that for some sites, more than 1 survey was done per day. Wha
 
 data_site_average <- data_by_survey %>%
   group_by(reef_id, date) %>%
-  mutate(coral = round(mean(perc_survey), 2),
+  mutate(coral = round(mean(perc_survey), 2), # rounds to 2 decimal places!
          coral_std = round(sd(perc_survey), 2),
          depth_m = round(mean(depth), 2),
          n_surveys= length(unique(perc_survey))) %>%
   ungroup() %>%
-  distinct(reef_id, date, .keep_all=TRUE)
+  distinct(reef_id, date, .keep_all=TRUE) # only want data for the distinct reefs and days
 
 
 # new df <- previous_df %>%
@@ -345,4 +350,8 @@ data_tidy[1:10,] %>%
   kable_styling(bootstrap_options = "condensed", full_width=F)
 ```
 
+
+```{r}
+
+```
 
